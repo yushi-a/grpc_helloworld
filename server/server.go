@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"time"
 
 	"grpc_helloworld/config"
 	pb "grpc_helloworld/proto"
@@ -25,6 +26,13 @@ type server struct {
 // SayHello implements helloworld.GreeterServer.
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	log.Printf("Received: %v", in.GetName())
+	go func() {
+		select {
+		case <-ctx.Done():
+			log.Printf("Context done: %v", ctx.Err())
+		}
+	}()
+	time.Sleep(3 * time.Second)
 	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
 }
 
