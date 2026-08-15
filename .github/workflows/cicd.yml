@@ -28,18 +28,25 @@ jobs:
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       -
+        # PR ではレジストリへ push しないので認証も不要。
+        # Dependabot や fork からの PR には Actions secrets が渡らず、
+        # ログインを試みると必ず失敗するためスキップする。
         name: Login to DockerHub
+        if: github.event_name == 'push'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       -
+        # push イベント (master / v* タグ) のみ DockerHub へ push する。
+        # PR ではビルドが通ることの検証だけを行う。
         name: Build and push
         id: docker_build
         uses: docker/build-push-action@v5
         with:
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/grpc_helloworld:${{ github.sha }}
+          push: ${{ github.event_name == 'push' }}
+          tags: "${{ github.event_name == 'push' && format('{0}/grpc_helloworld:{1}', secrets.DOCKER_USERNAME, github.sha) || format('grpc_helloworld:{0}', github.sha) }}"
       -
         name: Image digest
+        if: github.event_name == 'push'
         run: echo ${{ steps.docker_build.outputs.digest }}
